@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cable Checker</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Roboto, sans-serif; margin: 0; padding: 12px;
+         background: #f0f2f5; color: #222; }
+  h1 { font-size: 19px; margin: 0 0 6px; }
+  .sub { color: #666; font-size: 12.5px; margin-bottom: 8px; }
+  .bar { display: flex; gap: 8px; margin-bottom: 8px; position: sticky; top: 0;
+         background: #f0f2f5; padding: 8px 0; z-index: 10; }
+  input[type=text] { flex: 1; padding: 12px; font-size: 16px; border: 2px solid #ccc;
+                     border-radius: 8px; outline: none; min-width: 0; }
+  input[type=text]:focus { border-color: #007bff; }
+  button { padding: 12px 14px; font-size: 15px; background: #007bff; color: #fff;
+           border: none; border-radius: 8px; font-weight: 600; white-space: nowrap; }
+  button:active { background: #0056b3; }
+  button.alt { background: #6c757d; }
+  button.alt:active { background: #495057; }
+  button.danger { background: #dc3545; }
+  button.danger:active { background: #a71d2a; }
+  .stats { font-size: 14px; color: #555; margin-bottom: 10px; }
+  .stats b { color: #007bff; }
+  .result { background: #fff; padding: 14px 12px; margin-bottom: 8px; border-radius: 8px;
+            border-left: 5px solid #28a745; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .result.checked { opacity: .5; border-left-color: #999; background: #eef0f2; }
+  .result.checked-list { border-left-color: #007bff; background: #e7f3ff; opacity: 1; }
+  .result.spare { border-left-color: #ffc107; background: #fffbea; }
+  .row { display: flex; gap: 12px; align-items: center; }
+  input[type=checkbox] { width: 26px; height: 26px; flex-shrink: 0; }
+  .code { font-weight: 700; font-size: 16px; word-break: break-word; color: #111; line-height: 1.35; }
+  .empty { color: #888; text-align: center; padding: 40px 10px; font-size: 15px; }
+  .actions { display: flex; gap: 8px; margin-bottom: 10px; }
+  .actions button, .copy-row button { flex: 1; padding: 10px; font-size: 14px; }
+  .copy-row { display: flex; gap: 8px; margin-bottom: 10px; }
+</style></head><body>
+<h1>🔍 Cable Checker</h1>
+<div class="sub">Sheet: <b>FDR.3F.Z2.02</b> — 627 vị trí</div>
+<div class="bar">
+  <input type="text" id="q" placeholder="VD: 0285, DATA, RACK 03..." autofocus>
+  <button onclick="doSearch()">Tìm</button>
+  <button class="alt" id="btnChecked" onclick="showChecked()">📋 <span id="cntChecked">0</span></button>
+</div>
+<div class="stats" id="stats"></div>
+<div id="results"><div class="empty">Nhập ký tự và nhấn Tìm</div></div>
+
+<script>
+const DATA = ["CCTV.3F.0119.RACK 01.PP 1.Port 1", "CCTV.3F.0120.RACK 01.PP 1.Port 2", "CCTV.3F.0121.RACK 01.PP 1.Port 3", "CCTV.3F.0122.RACK 01.PP 1.Port 4", "CCTV.3F.0123.RACK 01.PP 1.Port 5", "CCTV.3F.0124.RACK 01.PP 1.Port 6", "CCTV.3F.0125.RACK 01.PP 1.Port 7", "CCTV.3F.0210.RACK 01.PP 1.Port 8", "CCTV.3F.0215.RACK 01.PP 1.Port 9", "CCTV.3F.0216.RACK 01.PP 1.Port 10", "CCTV.3F.0217.RACK 01.PP 1.Port 11", "CCTV.3F.0218.RACK 01.PP 1.Port 12", "CCTV.3F.0225.RACK 01.PP 1.Port 13", "CCTV.3F.0226.RACK 01.PP 1.Port 14", "CCTV.3F.0227.RACK 01.PP 1.Port 15", "CCTV.3F.0228.RACK 01.PP 1.Port 16", "CCTV.3F.0229.RACK 01.PP 1.Port 17", "CCTV.3F.0230.RACK 01.PP 1.Port 18", "CCTV.3F.0231.RACK 01.PP 1.Port 19", "CCTV.3F.0232.RACK 01.PP 1.Port 20", "CCTV.3F.0233.RACK 01.PP 1.Port 21", "CCTV.3F.0234.RACK 01.PP 1.Port 22", "CCTV.3F.0235.RACK 01.PP 1.Port 23", "CCTV.3F.0236.RACK 01.PP 1.Port 24", "CCTV.3F.0237.RACK 01.PP 2.Port 1", "CCTV.3F.0238.RACK 01.PP 2.Port 2", "CCTV.3F.0239.RACK 01.PP 2.Port 3", "CCTV.3F.0267.RACK 01.PP 2.Port 4", "CCTV.3F.0270.RACK 01.PP 2.Port 5", "CCTV.3F.0271.RACK 01.PP 2.Port 6", "CCTV.3F.0485.RACK 01.PP 2.Port 7", "CCTV.4F.0017.RACK 01.PP 2.Port 8", "CCTV.4F.0018.RACK 01.PP 2.Port 9", "CCTV.4F.0019.RACK 01.PP 2.Port 10", "MCS.3F.0004.RACK 01.PP 3.Port 1", "MCS.3F.0017.RACK 01.PP 3.Port 2", "MCS.3F.0019.RACK 01.PP 3.Port 3", "MCS.3F.0020.RACK 01.PP 3.Port 4", "WDNE-A.3F.0033.RACK 01.PP 3.Port 5", "WDNE-A.3F.0093.RACK 01.PP 3.Port 6", "WDNE-A.3F.0115.RACK 01.PP 3.Port 7", "WDNE-A.3F.0116.RACK 01.PP 3.Port 8", "WDNE-A.3F.0117.RACK 01.PP 3.Port 9", "AGAC.3F.30-1.RACK 01.PP 3.Port 10", "AGAC.3F.30-2.RACK 01.PP 3.Port 11", "AGAC.3F.30-3.RACK 01.PP 3.Port 12", "AGAC.3F.30-4.RACK 01.PP 3.Port 13", "AGAC.3F.31-1.RACK 01.PP 3.Port 14", "AGAC.3F.31-2.RACK 01.PP 3.Port 15", "AGAC.3F.31-3.RACK 01.PP 3.Port 16", "AGAC.3F.31-4.RACK 01.PP 3.Port 17", "FIDS.3F.23-1.RACK 01.PP 3.Port 18", "FIDS.3F.23-2.RACK 01.PP 3.Port 19", "FIDS.3F.24-1.RACK 01.PP 3.Port 20", "FIDS.3F.24-2.RACK 01.PP 3.Port 21", "WDNE-NonA.3F.0068.RACK 01.PP 4.Port 1", "WDNE-NonA.3F.0076.RACK 01.PP 4.Port 2", "WDNE-NonA.3F.0077.RACK 01.PP 4.Port 3", "WDNE-NonA.3F.0109.RACK 01.PP 4.Port 4", "IPP.3F.0014.RACK 02.PP 1.Port 1", "IPP.3F.0015.RACK 02.PP 1.Port 2", "IPP.3F.0132.RACK 02.PP 1.Port 3", "IPP.3F.0133.RACK 02.PP 1.Port 4", "IPP.3F.0134.RACK 02.PP 1.Port 5", "IPP.3F.0135.RACK 02.PP 1.Port 6", "IPP.3F.0180.RACK 02.PP 1.Port 7", "IPP.3F.0181.RACK 02.PP 1.Port 8", "IPP.3F.0182-1.RACK 02.PP 1.Port 9", "IPP.3F.0183.RACK 02.PP 1.Port 10", "IPP.3F.0184.RACK 02.PP 1.Port 11", "IPP.3F.0185.RACK 02.PP 1.Port 12", "IPP.3F.0186.RACK 02.PP 1.Port 13", "IPP.3F.0187.RACK 02.PP 1.Port 14", "IPP.3F.0188.RACK 02.PP 1.Port 15", "IPP.3F.0189.RACK 02.PP 1.Port 16", "IPP.3F.0249.RACK 02.PP 1.Port 17", "IPP.3F.0250.RACK 02.PP 1.Port 18", "IPP.3F.0251.RACK 02.PP 1.Port 19", "IPP.3F.0252.RACK 02.PP 1.Port 20", "IPP.3F.0253.RACK 02.PP 2.Port 1", "IPP.3F.0254.RACK 02.PP 2.Port 2", "IPP.3F.0255.RACK 02.PP 2.Port 3", "IPP.3F.0256.RACK 02.PP 2.Port 4", "IPP.3F.0257.RACK 02.PP 2.Port 5", "IPP.3F.0258.RACK 02.PP 2.Port 6", "IPP.3F.0259.RACK 02.PP 2.Port 7", "IPP.3F.0260.RACK 02.PP 2.Port 8", "IPP.3F.0261.RACK 02.PP 2.Port 9", "IPP.3F.0262.RACK 02.PP 2.Port 10", "IPP.3F.0263.RACK 02.PP 2.Port 11", "IPP.3F.0264.RACK 02.PP 2.Port 12", "IPP.3F.0265.RACK 02.PP 2.Port 13", "IPP.3F.0266.RACK 02.PP 2.Port 14", "IPP.3F.0111.RACK 02.PP 2.Port 15", "IPP.3F.0110.RACK 02.PP 2.Port 16", "IPP.3F.0113.RACK 02.PP 2.Port 17", "IPP.3F.0115.RACK 02.PP 2.Port 18", "IPP.3F.0117.RACK 02.PP 2.Port 19", "IPP.3F.0173.RACK 02.PP 2.Port 20", "IPP.3F.0175.RACK 02.PP 2.Port 21", "IPP.3F.0177.RACK 02.PP 2.Port 22", "IPP.3F.0174.RACK 02.PP 2.Port 23", "IPP.3F.0172.RACK 02.PP 2.Port 24", "IPP.3F.0116.RACK 02.PP 3.Port 1", "IPP.3F.0114.RACK 02.PP 3.Port 2", "IPP.3F.0112.RACK 02.PP 3.Port 3", "IPP.3F.0176.RACK 02.PP 3.Port 4", "IPP.3F.0178.RACK 02.PP 3.Port 5", "IPP.3F.0179.RACK 02.PP 3.Port 6", "IPP.3F.0118.RACK 02.PP 3.Port 7", "IPP.3F.0120.RACK 02.PP 3.Port 8", "IPP.3F.0122.RACK 02.PP 3.Port 9", "IPP.3F.0124.RACK 02.PP 3.Port 10", "IPP.3F.0126.RACK 02.PP 3.Port 11", "IPP.3F.0128.RACK 02.PP 3.Port 12", "IPP.3F.0130.RACK 02.PP 3.Port 13", "IPP.3F.0131.RACK 02.PP 3.Port 14", "IPP.3F.0129.RACK 02.PP 3.Port 15", "IPP.3F.0127.RACK 02.PP 3.Port 16", "IPP.3F.0125.RACK 02.PP 3.Port 17", "IPP.3F.0123.RACK 02.PP 3.Port 18", "IPP.3F.0121.RACK 02.PP 3.Port 19", "IPP.3F.0119.RACK 02.PP 3.Port 20", "ACS.3F.0054.RACK 02.PP 3.Port 21", "ACS.3F.0055.RACK 02.PP 3.Port 22", "ACS.3F.0056.RACK 02.PP 3.Port 23", "ACS.3F.0057.RACK 02.PP 3.Port 24", "ACS.3F.0058.RACK 02.PP 4.Port 1", "ACS.3F.0059.RACK 02.PP 4.Port 2", "ACS.3F.0060.RACK 02.PP 4.Port 3", "ACS.4F.0011.RACK 02.PP 4.Port 4", "ACS.4F.0012.RACK 02.PP 4.Port 5", "ACS.4F.0013.RACK 02.PP 4.Port 6", "ACS.4F.0014.RACK 02.PP 4.Port 7", "DATA.3F.0051-1.RACK 02.PP 4.Port 8", "DATA.3F.0051-2.RACK 02.PP 4.Port 9", "DATA.3F.0052-1.RACK 02.PP 4.Port 10", "DATA.3F.0052-2.RACK 02.PP 4.Port 11", "DATA.3F.0053-1.RACK 02.PP 4.Port 12", "DATA.3F.0053-2.RACK 02.PP 4.Port 13", "DATA.3F.0054-1.RACK 02.PP 4.Port 14", "DATA.3F.0054-2.RACK 02.PP 4.Port 15", "DATA.3F.0055-1.RACK 02.PP 4.Port 16", "DATA.3F.0055-2.RACK 02.PP 4.Port 17", "DATA.3F.0056.RACK 02.PP 4.Port 18", "DATA.3F.0057-1.RACK 02.PP 4.Port 19", "DATA.3F.0057-2.RACK 02.PP 4.Port 20", "DATA.3F.0057-3.RACK 02.PP 4.Port 21", "DATA.3F.0057-4.RACK 02.PP 4.Port 22", "DATA.3F.0058-1.RACK 02.PP 4.Port 23", "DATA.3F.0058-2.RACK 02.PP 4.Port 24", "DATA.3F.0058-3.RACK 02.PP 5.Port 1", "DATA.3F.0058-4.RACK 02.PP 5.Port 2", "DATA.3F.0059-1.RACK 02.PP 5.Port 3", "DATA.3F.0059-2.RACK 02.PP 5.Port 4", "DATA.3F.0146-1.RACK 02.PP 5.Port 5", "DATA.3F.0146-2.RACK 02.PP 5.Port 6", "DATA.3F.0147-1.RACK 02.PP 5.Port 7", "DATA.3F.0147-2.RACK 02.PP 5.Port 8", "DATA.3F.0149-1.RACK 02.PP 5.Port 9", "DATA.3F.0149-2.RACK 02.PP 5.Port 10", "DATA.3F.0162-1.RACK 02.PP 5.Port 11", "DATA.3F.0162-2.RACK 02.PP 5.Port 12", "DATA.3F.0179-1.RACK 02.PP 5.Port 13", "DATA.3F.0179-2.RACK 02.PP 5.Port 14", "DATA.3F.0180-1.RACK 02.PP 5.Port 15", "DATA.3F.0180-2.RACK 02.PP 5.Port 16", "DATA.3F.0181-1.RACK 02.PP 5.Port 17", "DATA.3F.0181-2.RACK 02.PP 5.Port 18", "DATA.3F.0182-1.RACK 02.PP 5.Port 19", "DATA.3F.0182-2.RACK 02.PP 5.Port 20", "DATA.3F.0183-1.RACK 02.PP 5.Port 21", "DATA.3F.0183-2.RACK 02.PP 5.Port 22", "DATA.3F.0184-1.RACK 02.PP 5.Port 23", "DATA.3F.0184-2.RACK 02.PP 5.Port 24", "DATA.3F.0185-1.RACK 02.PP 6.Port 1", "DATA.3F.0185-2.RACK 02.PP 6.Port 2", "DATA.3F.0186-1.RACK 02.PP 6.Port 3", "DATA.3F.0186-2.RACK 02.PP 6.Port 4", "DATA.3F.0187-1.RACK 02.PP 6.Port 5", "DATA.3F.0187-2.RACK 02.PP 6.Port 6", "DATA.3F.0188-1.RACK 02.PP 6.Port 7", "DATA.3F.0188-2.RACK 02.PP 6.Port 8", "DATA.3F.0189-1.RACK 02.PP 6.Port 9", "DATA.3F.0189-2.RACK 02.PP 6.Port 10", "DATA.3F.0190-1.RACK 02.PP 6.Port 11", "DATA.3F.0190-2.RACK 02.PP 6.Port 12", "DATA.3F.0191-1.RACK 02.PP 6.Port 13", "DATA.3F.0191-2.RACK 02.PP 6.Port 14", "DATA.3F.0192-1.RACK 02.PP 6.Port 15", "DATA.3F.0192-2.RACK 02.PP 6.Port 16", "DATA.3F.0193-1.RACK 02.PP 6.Port 17", "DATA.3F.0193-2.RACK 02.PP 6.Port 18", "DATA.3F.0194-1.RACK 02.PP 6.Port 19", "DATA.3F.0194-2.RACK 02.PP 6.Port 20", "DATA.3F.0195-1.RACK 02.PP 6.Port 21", "DATA.3F.0195-2.RACK 02.PP 6.Port 22", "DATA.3F.0196-1.RACK 02.PP 6.Port 23", "DATA.3F.0196-2.RACK 02.PP 6.Port 24", "DATA.3F.0197-1.RACK 02.PP 7.Port 1", "DATA.3F.0197-2.RACK 02.PP 7.Port 2", "DATA.3F.0198-1.RACK 02.PP 7.Port 3", "DATA.3F.0198-2.RACK 02.PP 7.Port 4", "DATA.3F.0199-1.RACK 02.PP 7.Port 5", "DATA.3F.0199-2.RACK 02.PP 7.Port 6", "DATA.3F.0200-1.RACK 02.PP 7.Port 7", "DATA.3F.0200-2.RACK 02.PP 7.Port 8", "DATA.3F.0201-1.RACK 02.PP 7.Port 9", "DATA.3F.0201-2.RACK 02.PP 7.Port 10", "DATA.3F.0202-1.RACK 02.PP 7.Port 11", "DATA.3F.0202-2.RACK 02.PP 7.Port 12", "DATA.3F.0203-1.RACK 02.PP 7.Port 13", "DATA.3F.0203-2.RACK 02.PP 7.Port 14", "DATA.3F.0204-1.RACK 02.PP 7.Port 15", "DATA.3F.0204-2.RACK 02.PP 7.Port 16", "DATA.3F.0205-1.RACK 02.PP 7.Port 17", "DATA.3F.0205-2.RACK 02.PP 7.Port 18", "DATA.3F.0206-1.RACK 02.PP 7.Port 19", "DATA.3F.0206-2.RACK 02.PP 7.Port 20", "DATA.3F.0207-1.RACK 02.PP 7.Port 21", "DATA.3F.0207-2.RACK 02.PP 7.Port 22", "DATA.3F.0208-1.RACK 02.PP 7.Port 23", "DATA.3F.0208-2.RACK 02.PP 7.Port 24", "DATA.3F.0209-1.RACK 02.PP 8.Port 1", "DATA.3F.0209-2.RACK 02.PP 8.Port 2", "DATA.3F.0210-1.RACK 02.PP 8.Port 3", "DATA.3F.0210-2.RACK 02.PP 8.Port 4", "DATA.3F.0211-1.RACK 02.PP 8.Port 5", "DATA.3F.0211-2.RACK 02.PP 8.Port 6", "DATA.3F.0212-1.RACK 02.PP 8.Port 7", "DATA.3F.0212-2.RACK 02.PP 8.Port 8", "DATA.3F.0213-1.RACK 02.PP 8.Port 9", "DATA.3F.0213-2.RACK 02.PP 8.Port 10", "DATA.3F.0214-1.RACK 02.PP 8.Port 11", "DATA.3F.0214-2.RACK 02.PP 8.Port 12", "DATA.3F.0215-1.RACK 02.PP 8.Port 13", "DATA.3F.0215-2.RACK 02.PP 8.Port 14", "DATA.3F.0216-1.RACK 02.PP 8.Port 15", "DATA.3F.0216-2.RACK 02.PP 8.Port 16", "DATA.3F.0217-1.RACK 02.PP 8.Port 17", "DATA.3F.0217-2.RACK 02.PP 8.Port 18", "DATA.3F.0218-1.RACK 02.PP 8.Port 19", "DATA.3F.0218-2.RACK 02.PP 8.Port 20", "DATA.3F.0219-1.RACK 02.PP 8.Port 21", "DATA.3F.0219-2.RACK 02.PP 8.Port 22", "DATA.3F.0220-1.RACK 02.PP 8.Port 23", "DATA.3F.0220-2.RACK 02.PP 8.Port 24", "DATA.3F.0221-1.RACK 02.PP 9.Port 1", "DATA.3F.0221-2.RACK 02.PP 9.Port 2", "DATA.3F.0222-1.RACK 02.PP 9.Port 3", "DATA.3F.0222-2.RACK 02.PP 9.Port 4", "DATA.3F.0223-1.RACK 02.PP 9.Port 5", "DATA.3F.0223-2.RACK 02.PP 9.Port 6", "DATA.3F.0224-1.RACK 02.PP 9.Port 7", "DATA.3F.0224-2.RACK 02.PP 9.Port 8", "DATA.3F.0225-1.RACK 02.PP 9.Port 9", "DATA.3F.0225-2.RACK 02.PP 9.Port 10", "DATA.3F.0226-1.RACK 02.PP 9.Port 11", "DATA.3F.0226-2.RACK 02.PP 9.Port 12", "DATA.3F.0227-1.RACK 02.PP 9.Port 13", "DATA.3F.0227-2.RACK 02.PP 9.Port 14", "DATA.3F.0228-1.RACK 02.PP 9.Port 15", "DATA.3F.0228-2.RACK 02.PP 9.Port 16", "DATA.3F.0229-1.RACK 02.PP 9.Port 17", "DATA.3F.0229-2.RACK 02.PP 9.Port 18", "DATA.3F.0230-1.RACK 02.PP 9.Port 19", "DATA.3F.0230-2.RACK 02.PP 9.Port 20", "DATA.3F.0231-1.RACK 02.PP 9.Port 21", "DATA.3F.0231-2.RACK 02.PP 9.Port 22", "DATA.3F.0232-1.RACK 02.PP 9.Port 23", "DATA.3F.0232-2.RACK 02.PP 9.Port 24", "DATA.3F.0233-1.RACK 02.PP 10.Port 1", "DATA.3F.0233-2.RACK 02.PP 10.Port 2", "DATA.3F.0234-1.RACK 02.PP 10.Port 3", "DATA.3F.0234-2.RACK 02.PP 10.Port 4", "DATA.3F.0235-1.RACK 02.PP 10.Port 5", "DATA.3F.0235-2.RACK 02.PP 10.Port 6", "DATA.3F.0236-1.RACK 02.PP 10.Port 7", "DATA.3F.0236-2.RACK 02.PP 10.Port 8", "DATA.3F.0237-1.RACK 02.PP 10.Port 9", "DATA.3F.0237-2.RACK 02.PP 10.Port 10", "DATA.3F.0238-1.RACK 02.PP 10.Port 11", "DATA.3F.0238-2.RACK 02.PP 10.Port 12", "DATA.3F.0239-1.RACK 02.PP 10.Port 13", "DATA.3F.0239-2.RACK 02.PP 10.Port 14", "DATA.3F.0240-1.RACK 02.PP 10.Port 15", "DATA.3F.0240-2.RACK 02.PP 10.Port 16", "DATA.3F.0241-1.RACK 02.PP 10.Port 17", "DATA.3F.0241-2.RACK 02.PP 10.Port 18", "DATA.3F.0242-1.RACK 02.PP 10.Port 19", "DATA.3F.0242-2.RACK 02.PP 10.Port 20", "DATA.3F.0243-1.RACK 02.PP 10.Port 21", "DATA.3F.0243-2.RACK 02.PP 10.Port 22", "DATA.3F.0244-1.RACK 02.PP 10.Port 23", "DATA.3F.0244-2.RACK 02.PP 10.Port 24", "DATA.3F.0245-1.RACK 02.PP 11.Port 1", "DATA.3F.0245-2.RACK 02.PP 11.Port 2", "DATA.3F.0246-1.RACK 02.PP 11.Port 3", "DATA.3F.0246-2.RACK 02.PP 11.Port 4", "DATA.3F.0247-1.RACK 02.PP 11.Port 5", "DATA.3F.0247-2.RACK 02.PP 11.Port 6", "DATA.3F.0248-1.RACK 02.PP 11.Port 7", "DATA.3F.0248-2.RACK 02.PP 11.Port 8", "DATA.3F.0249-1.RACK 02.PP 11.Port 9", "DATA.3F.0249-2.RACK 02.PP 11.Port 10", "DATA.3F.0250-1.RACK 02.PP 11.Port 11", "DATA.3F.0250-2.RACK 02.PP 11.Port 12", "DATA.3F.0251-1.RACK 02.PP 11.Port 13", "DATA.3F.0251-2.RACK 02.PP 11.Port 14", "DATA.3F.0252-1.RACK 02.PP 11.Port 15", "DATA.3F.0252-2.RACK 02.PP 11.Port 16", "DATA.3F.0253-1.RACK 02.PP 11.Port 17", "DATA.3F.0253-2.RACK 02.PP 11.Port 18", "DATA.3F.0254-1.RACK 02.PP 11.Port 19", "DATA.3F.0254-2.RACK 02.PP 11.Port 20", "ADV.3F.02.RACK 02.PP 11.Port 21", "DATA.3F.0255-1.RACK 03.PP 1.Port 1", "DATA.3F.0255-2.RACK 03.PP 1.Port 2", "DATA.3F.0256-1.RACK 03.PP 1.Port 3", "DATA.3F.0256-2.RACK 03.PP 1.Port 4", "DATA.3F.0257-1.RACK 03.PP 1.Port 5", "DATA.3F.0257-2.RACK 03.PP 1.Port 6", "DATA.3F.0258-1.RACK 03.PP 1.Port 7", "DATA.3F.0258-2.RACK 03.PP 1.Port 8", "DATA.3F.0259-1.RACK 03.PP 1.Port 9", "DATA.3F.0259-2.RACK 03.PP 1.Port 10", "DATA.3F.0260-1.RACK 03.PP 1.Port 11", "DATA.3F.0260-2.RACK 03.PP 1.Port 12", "DATA.3F.0261-1.RACK 03.PP 1.Port 13", "DATA.3F.0261-2.RACK 03.PP 1.Port 14", "DATA.3F.0262-1.RACK 03.PP 1.Port 15", "DATA.3F.0262-2.RACK 03.PP 1.Port 16", "DATA.3F.0263-1.RACK 03.PP 1.Port 17", "DATA.3F.0263-2.RACK 03.PP 1.Port 18", "DATA.3F.0264-1.RACK 03.PP 1.Port 19", "DATA.3F.0264-2.RACK 03.PP 1.Port 20", "DATA.3F.0265-1.RACK 03.PP 1.Port 21", "DATA.3F.0265-2.RACK 03.PP 1.Port 22", "DATA.3F.0266-1.RACK 03.PP 1.Port 23", "DATA.3F.0266-2.RACK 03.PP 1.Port 24", "DATA.3F.0267-1.RACK 03.PP 2.Port 1", "DATA.3F.0267-2.RACK 03.PP 2.Port 2", "DATA.3F.0268-1.RACK 03.PP 2.Port 3", "DATA.3F.0268-2.RACK 03.PP 2.Port 4", "DATA.3F.0289-1.RACK 03.PP 2.Port 5", "DATA.3F.0289-2.RACK 03.PP 2.Port 6", "DATA.3F.0290-1.RACK 03.PP 2.Port 7", "DATA.3F.0290-2.RACK 03.PP 2.Port 8", "DATA.3F.0291-1.RACK 03.PP 2.Port 9", "DATA.3F.0291-2.RACK 03.PP 2.Port 10", "DATA.3F.0292-1.RACK 03.PP 2.Port 11", "DATA.3F.0292-2.RACK 03.PP 2.Port 12", "DATA.3F.0293-1.RACK 03.PP 2.Port 13", "DATA.3F.0293-2.RACK 03.PP 2.Port 14", "DATA.3F.0294-1.RACK 03.PP 2.Port 15", "DATA.3F.0294-2.RACK 03.PP 2.Port 16", "DATA.3F.0295-1.RACK 03.PP 2.Port 17", "DATA.3F.0295-2.RACK 03.PP 2.Port 18", "DATA.3F.0296-1.RACK 03.PP 2.Port 19", "DATA.3F.0296-2.RACK 03.PP 2.Port 20", "DATA.3F.0297-1.RACK 03.PP 2.Port 21", "DATA.3F.0297-2.RACK 03.PP 2.Port 22", "DATA.3F.0298-1.RACK 03.PP 2.Port 23", "DATA.3F.0298-2.RACK 03.PP 2.Port 24", "DATA.3F.0299-1.RACK 03.PP 3.Port 1", "DATA.3F.0299-2.RACK 03.PP 3.Port 2", "DATA.3F.0300-1.RACK 03.PP 3.Port 3", "DATA.3F.0300-2.RACK 03.PP 3.Port 4", "DATA.3F.0301-1.RACK 03.PP 3.Port 5", "DATA.3F.0301-2.RACK 03.PP 3.Port 6", "DATA.3F.0302-1.RACK 03.PP 3.Port 7", "DATA.3F.0302-2.RACK 03.PP 3.Port 8", "DATA.3F.0303-1.RACK 03.PP 3.Port 9", "DATA.3F.0303-2.RACK 03.PP 3.Port 10", "DATA.3F.0304-1.RACK 03.PP 3.Port 11", "DATA.3F.0304-2.RACK 03.PP 3.Port 12", "DATA.3F.0305-1.RACK 03.PP 3.Port 13", "DATA.3F.0305-2.RACK 03.PP 3.Port 14", "DATA.3F.0306-1.RACK 03.PP 3.Port 15", "DATA.3F.0306-2.RACK 03.PP 3.Port 16", "DATA.3F.0307-1.RACK 03.PP 3.Port 17", "DATA.3F.0307-2.RACK 03.PP 3.Port 18", "DATA.3F.0308-1.RACK 03.PP 3.Port 19", "DATA.3F.0308-2.RACK 03.PP 3.Port 20", "DATA.3F.0349-1.RACK 03.PP 3.Port 21", "DATA.3F.0349-2.RACK 03.PP 3.Port 22", "DATA.3F.0434-1.RACK 03.PP 3.Port 23", "DATA.3F.0434-2.RACK 03.PP 3.Port 24", "DATA.3F.0435-1.RACK 03.PP 4.Port 1", "DATA.3F.0435-2.RACK 03.PP 4.Port 2", "DATA.3F.0436-1.RACK 03.PP 4.Port 3", "DATA.3F.0436-2.RACK 03.PP 4.Port 4", "OOG.3F.05-1.RACK 03.PP 4.Port 5", "OOG.3F.05-2.RACK 03.PP 4.Port 6", "CUS D.3F.0049-1.RACK 03.PP 5.Port 1", "CUS D.3F.0049-2.RACK 03.PP 5.Port 2", "CUS D.3F.0050-1.RACK 03.PP 5.Port 3", "CUS D.3F.0050-2.RACK 03.PP 5.Port 4", "CUS D.3F.0165-1.RACK 03.PP 5.Port 5", "CUS D.3F.0165-2.RACK 03.PP 5.Port 6", "CUS D.3F.0166-1.RACK 03.PP 5.Port 7", "CUS D.3F.0166-2.RACK 03.PP 5.Port 8", "CUS.D.3F.0309-1.RACK 03.PP 5.Port 9", "CUS.D.3F.0309-2.RACK 03.PP 5.Port 10", "CUS.D.3F.0310-1.RACK 03.PP 5.Port 11", "CUS.D.3F.0310-2.RACK 03.PP 5.Port 12", "CUS.D.3F.0311-1.RACK 03.PP 5.Port 13", "CUS.D.3F.0311-2.RACK 03.PP 5.Port 14", "CUS.D.3F.0312-1.RACK 03.PP 5.Port 15", "CUS.D.3F.0312-2.RACK 03.PP 5.Port 16", "CUS.D.3F.0313-1.RACK 03.PP 5.Port 17", "CUS.D.3F.0313-2.RACK 03.PP 5.Port 18", "CUS.D.3F.0314-1.RACK 03.PP 5.Port 19", "CUS.D.3F.0314-2.RACK 03.PP 5.Port 20", "CUS.D.3F.0315-1.RACK 03.PP 5.Port 21", "CUS.D.3F.0315-2.RACK 03.PP 5.Port 22", "CUS.D.3F.0316-1.RACK 03.PP 5.Port 23", "CUS.D.3F.0316-2.RACK 03.PP 5.Port 24", "CUS.D.3F.0317-1.RACK 03.PP 6.Port 1", "CUS.D.3F.0317-2.RACK 03.PP 6.Port 2", "CUS.D.3F.0318-1.RACK 03.PP 6.Port 3", "CUS.D.3F.0318-2.RACK 03.PP 6.Port 4", "CUS.D.3F.0319-1.RACK 03.PP 6.Port 5", "CUS.D.3F.0319-2.RACK 03.PP 6.Port 6", "CUS.D.3F.0320-1.RACK 03.PP 6.Port 7", "CUS.D.3F.0320-2.RACK 03.PP 6.Port 8", "CUS.D.3F.0321-1.RACK 03.PP 6.Port 9", "CUS.D.3F.0321-2.RACK 03.PP 6.Port 10", "CUS.D.3F.0322-1.RACK 03.PP 6.Port 11", "CUS.D.3F.0322-2.RACK 03.PP 6.Port 12", "CUS.D.3F.0323-1.RACK 03.PP 6.Port 13", "CUS.D.3F.0323-2.RACK 03.PP 6.Port 14", "CUS.D.3F.0324-1.RACK 03.PP 6.Port 15", "CUS.D.3F.0324-2.RACK 03.PP 6.Port 16", "CUS.D.3F.0325-1.RACK 03.PP 6.Port 17", "CUS.D.3F.0325-2.RACK 03.PP 6.Port 18", "CUS.D.3F.0326-1.RACK 03.PP 6.Port 19", "CUS.D.3F.0326-2.RACK 03.PP 6.Port 20", "CUS.D.3F.0327-1.RACK 03.PP 6.Port 21", "CUS.D.3F.0327-2.RACK 03.PP 6.Port 22", "CUS.D.3F.0328-1.RACK 03.PP 6.Port 23", "CUS.D.3F.0328-2.RACK 03.PP 6.Port 24", "CUS.D.3F.0329-1.RACK 03.PP 7.Port 1", "CUS.D.3F.0329-2.RACK 03.PP 7.Port 2", "CUS.D.3F.0330-1.RACK 03.PP 7.Port 3", "CUS.D.3F.0330-2.RACK 03.PP 7.Port 4", "CUS.D.3F.0331-1.RACK 03.PP 7.Port 5", "CUS.D.3F.0331-2.RACK 03.PP 7.Port 6", "CUS.D.3F.0332-1.RACK 03.PP 7.Port 7", "CUS.D.3F.0332-2.RACK 03.PP 7.Port 8", "CUS.D.3F.0333-1.RACK 03.PP 7.Port 9", "CUS.D.3F.0333-2.RACK 03.PP 7.Port 10", "CUS.D.3F.0334-1.RACK 03.PP 7.Port 11", "CUS.D.3F.0334-2.RACK 03.PP 7.Port 12", "CUS.D.3F.0335-1.RACK 03.PP 7.Port 13", "CUS.D.3F.0335-2.RACK 03.PP 7.Port 14", "CUS.D.3F.0336-1.RACK 03.PP 7.Port 15", "CUS.D.3F.0336-2.RACK 03.PP 7.Port 16", "CUS.D.3F.0337-1.RACK 03.PP 7.Port 17", "CUS.D.3F.0337-2.RACK 03.PP 7.Port 18", "CUS.D.3F.0338-1.RACK 03.PP 7.Port 19", "CUS.D.3F.0338-2.RACK 03.PP 7.Port 20", "CUS.D.3F.0339-1.RACK 03.PP 7.Port 21", "CUS.D.3F.0339-2.RACK 03.PP 7.Port 22", "CUS.D.3F.0340-1.RACK 03.PP 7.Port 23", "CUS.D.3F.0340-2.RACK 03.PP 7.Port 24", "CUS.D.3F.0341-1.RACK 03.PP 8.Port 1", "CUS.D.3F.0341-2.RACK 03.PP 8.Port 2", "CUS.D.3F.0342-1.RACK 03.PP 8.Port 3", "CUS.D.3F.0342-2.RACK 03.PP 8.Port 4", "CUS.D.3F.0343-1.RACK 03.PP 8.Port 5", "CUS.D.3F.0343-2.RACK 03.PP 8.Port 6", "CUS.D.3F.0344-1.RACK 03.PP 8.Port 7", "CUS.D.3F.0344-2.RACK 03.PP 8.Port 8", "CUS.D.3F.0345-1.RACK 03.PP 8.Port 9", "CUS.D.3F.0345-2.RACK 03.PP 8.Port 10", "CUS.D.3F.0346-1.RACK 03.PP 8.Port 11", "CUS.D.3F.0346-2.RACK 03.PP 8.Port 12", "CUS.D.3F.0347-1.RACK 03.PP 8.Port 13", "CUS.D.3F.0347-2.RACK 03.PP 8.Port 14", "CUS.D.3F.0348-1.RACK 03.PP 8.Port 15", "CUS.D.3F.0348-2.RACK 03.PP 8.Port 16", "CUS.D.3F.0419.RACK 03.PP 8.Port 17", "CUS.D.3F.0420.RACK 03.PP 8.Port 18", "CUS.D.3F.0421.RACK 03.PP 8.Port 19", "CUS.D.3F.0422.RACK 03.PP 8.Port 20", "CUS.D.3F.0423.RACK 03.PP 8.Port 21", "CUS.D.3F.0424.RACK 03.PP 8.Port 22", "CUS.D.3F.0443.RACK 03.PP 8.Port 23", "CUS.D.3F.0444-1.RACK 03.PP 8.Port 24", "CUS.D.3F.0444-2.RACK 03.PP 9.Port 1", "CUS.D.3F.0445-1.RACK 03.PP 9.Port 2", "CUS.D.3F.0445-2.RACK 03.PP 9.Port 3", "CUS.D.3F.0446-1.RACK 03.PP 9.Port 4", "CUS.D.3F.0446-2.RACK 03.PP 9.Port 5", "CUS.D.3F.0446-3.RACK 03.PP 9.Port 6", "CUS.D.3F.0446-4.RACK 03.PP 9.Port 7", "CUS.D.3F.0005-1.RACK 03.ODF 1", "CUS.D.3F.0005-2.RACK 03.ODF 1", "CUS.D.3F.0006-1.RACK 03.ODF 1", "CUS.D.3F.0006-2.RACK 03.ODF 1", "CUS.D.3F.0007-1.RACK 03.ODF 1", "CUS.D.3F.0007-2.RACK 03.ODF 1", "CUS.D.3F.0007-3.RACK 03.ODF 1", "CUS.D.3F.0007-4.RACK 03.ODF 1", "CUS.D.3F.0441.RACK 03.ODF 2", "CUS.D.3F.0442.RACK 03.ODF 2", "DATA.3F.0224-1.RACK 03.ODF 2", "DATA.3F.0224-2.RACK 03.ODF 2", "DATA.3F.0225-1.RACK 03.ODF 2", "DATA.3F.0225-2.RACK 03.ODF 2", "DATA.3F.0226-1.RACK 03.ODF 2", "DATA.3F.0226-2.RACK 03.ODF 2", "DATA.3F.0227-1.RACK 03.ODF 3", "DATA.3F.0227-2.RACK 03.ODF 3", "DATA.3F.0228-1.RACK 03.ODF 3", "DATA.3F.0228-2.RACK 03.ODF 3", "DATA.3F.0229-1.RACK 03.ODF 3", "DATA.3F.0229-2.RACK 03.ODF 3", "DATA.3F.0230-1.RACK 03.ODF 3", "DATA.3F.0230-2.RACK 03.ODF 3", "DATA.3F.0231-1.RACK 03.ODF 4", "DATA.3F.0231-2.RACK 03.ODF 4", "DATA.3F.0232-1.RACK 03.ODF 4", "DATA.3F.0232-2.RACK 03.ODF 4", "DATA.3F.0233-1.RACK 03.ODF 4", "DATA.3F.0233-2.RACK 03.ODF 4", "DATA.3F.0234-1.RACK 03.ODF 4", "DATA.3F.0234-2.RACK 03.ODF 4", "DATA.3F.0235-1.RACK 03.ODF 5", "DATA.3F.0235-2.RACK 03.ODF 5", "DATA.3F.0236-1.RACK 03.ODF 5", "DATA.3F.0236-2.RACK 03.ODF 5", "DATA.3F.0237-1.RACK 03.ODF 5", "DATA.3F.0237-2.RACK 03.ODF 5", "DATA.3F.0238-1.RACK 03.ODF 5", "DATA.3F.0238-2.RACK 03.ODF 5", "DATA.3F.0239-1.RACK 03.ODF 5", "DATA.3F.0239-2.RACK 03.ODF 5", "DATA.3F.0264-1.RACK 03.ODF 5", "DATA.3F.0264-2.RACK 03.ODF 5", "DATA.3F.0265-1.RACK 03.ODF 5", "DATA.3F.0265-2.RACK 03.ODF 5", "[SPARE] FDR.3F.Z1.04.RACK 03.ODF 5", "[SPARE] IPP.3F.0132.RACK 03.ODF 5", "[SPARE] IPP.3F.0133.RACK 03.ODF 5", "[SPARE] IPP.3F.0134.RACK 03.ODF 5", "[SPARE] CUS.D.3F.0005-2.RACK 03.ODF 5", "[SPARE] IPP.3F.0135.RACK 03.ODF 5", "[SPARE] CUS.D.3F.0006-2.RACK 03.ODF 5", "[SPARE] CCTV.3F.0025.RACK 03.ODF 5", "[SPARE] 3,1,1.RACK 03.ODF 5", "[SPARE] CUS.D.3F.0007-2.RACK 03.ODF 5", "[SPARE] CUS.D.3F.0007-3.RACK 03.ODF 5", "[SPARE] CUS.D.3F.0007-4.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0189-1.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0189-2.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0189-3.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0189-4.RACK 03.ODF 5", "[SPARE] DATA.3F.0224-2.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0188-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0225-2.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0188-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0226-2.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0188-3.RACK 03.ODF 5", "[SPARE] DATA.3F.0227-2.RACK 03.ODF 5", "[SPARE] CUS.T.3F.0188-4.RACK 03.ODF 5", "[SPARE] DATA.3F.0228-2.RACK 03.ODF 5", "[SPARE] CUS.B.3F.0366-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0229-2.RACK 03.ODF 5", "[SPARE] CUS.B.3F.0366-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0230-2.RACK 03.ODF 5", "[SPARE] CUS.B.3F.0444-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0231-2.RACK 03.ODF 5", "[SPARE] CUS.B.3F.0444-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0232-2.RACK 03.ODF 5", "[SPARE] CUS.B.3F.0444-3.RACK 03.ODF 5", "[SPARE] DATA.3F.0233-2.RACK 03.ODF 5", "[SPARE] CUS.B.3F.0444-4.RACK 03.ODF 5", "[SPARE] DATA.3F.0234-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0235-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0236-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0237-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0238-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0239-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0264-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0265-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0269-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0269-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0270-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0270-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0271-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0271-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0272-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0272-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0273-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0273-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0274-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0274-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0275-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0275-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0276-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0276-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0277-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0277-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0278-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0278-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0279-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0279-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0280-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0280-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0281-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0281-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0282-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0282-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0283-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0283-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0284-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0284-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0285-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0285-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0286-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0286-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0287-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0287-2.RACK 03.ODF 5", "[SPARE] DATA.3F.0288-1.RACK 03.ODF 5", "[SPARE] DATA.3F.0288-2.RACK 03.ODF 5"];
+const KEY = 'cablechecker_auto_v1';
+const getChecked = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { return {}; } };
+const setChecked = o => localStorage.setItem(KEY, JSON.stringify(o));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function updateCnt() {
+  document.getElementById('cntChecked').textContent = Object.keys(getChecked()).length;
+}
+
+function makeItem(v, checked, onToggle, extraClass) {
+  const el = document.createElement('div');
+  const isSpare = v.startsWith('[SPARE] ');
+  el.className = 'result' + (extraClass ? ' ' + extraClass : '') +
+                 (checked ? ' checked' : '') + (isSpare ? ' spare' : '');
+  el.innerHTML = `
+    <div class="row">
+      <input type="checkbox" ${checked ? 'checked' : ''}>
+      <div class="code">${esc(v)}</div>
+    </div>`;
+  const cb = el.querySelector('input[type=checkbox]');
+  cb.addEventListener('change', () => {
+    const c = getChecked();
+    if (cb.checked) c[v] = 1; else delete c[v];
+    setChecked(c);
+    el.classList.toggle('checked', cb.checked);
+    updateCnt();
+    if (onToggle) onToggle();
+  });
+  return el;
+}
+
+function doSearch() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const box = document.getElementById('results');
+  box.innerHTML = '';
+  if (!q) { document.getElementById('stats').textContent = ''; return; }
+  const results = [];
+  for (const v of DATA) {
+    if (v.toLowerCase().includes(q)) {
+      results.push(v);
+      if (results.length >= 500) break;
+    }
+  }
+  if (!results.length) {
+    document.getElementById('stats').textContent = '❌ Không tìm thấy: ' + q;
+    return;
+  }
+  const checked = getChecked();
+  results.forEach(v => {
+    box.appendChild(makeItem(v, !!checked[v], () => {
+      const c = getChecked();
+      const n = results.filter(x => c[x]).length;
+      document.getElementById('stats').innerHTML =
+        `✅ Tìm thấy <b>${results.length}</b> kết quả — Đã tích: <b>${n}/${results.length}</b>`;
+    }));
+  });
+  const c = getChecked();
+  const n = results.filter(x => c[x]).length;
+  document.getElementById('stats').innerHTML =
+    `✅ Tìm thấy <b>${results.length}</b> kết quả — Đã tích: <b>${n}/${results.length}</b>`;
+}
+
+function showChecked() {
+  const c = getChecked();
+  const list = Object.keys(c).sort();
+  const box = document.getElementById('results');
+  box.innerHTML = '';
+
+  if (!list.length) {
+    document.getElementById('stats').textContent = 'Chưa tích mã nào.';
+    box.innerHTML = '<div class="empty">Chưa tích mã nào.<br>Tìm và tích để lưu vào danh sách này.</div>';
+    return;
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const btnClear = document.createElement('button');
+  btnClear.className = 'danger';
+  btnClear.textContent = '🗑️ Xoá tất cả (' + list.length + ')';
+  btnClear.addEventListener('click', () => {
+    if (confirm('Xoá toàn bộ ' + list.length + ' mã đã tích?')) {
+      setChecked({}); updateCnt(); showChecked();
+    }
+  });
+  actions.appendChild(btnClear);
+  box.appendChild(actions);
+
+  const copyRow = document.createElement('div');
+  copyRow.className = 'copy-row';
+  const btnCopy = document.createElement('button');
+  btnCopy.className = 'alt';
+  btnCopy.textContent = '📄 Copy danh sách';
+  btnCopy.addEventListener('click', async () => {
+    const text = Object.keys(getChecked()).sort().join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      btnCopy.textContent = '✅ Đã copy';
+    } catch(e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      btnCopy.textContent = '✅ Đã copy';
+    }
+    setTimeout(() => btnCopy.textContent = '📄 Copy danh sách', 1500);
+  });
+  copyRow.appendChild(btnCopy);
+  box.appendChild(copyRow);
+
+  const refresh = () => {
+    const c2 = getChecked();
+    const remain = list.filter(x => c2[x]).length;
+    document.getElementById('stats').innerHTML =
+      `📋 Đã tích: <b>${Object.keys(c2).length}</b> mã — Hiển thị <b>${remain}</b> trong danh sách này`;
+  };
+
+  list.forEach(v => {
+    box.appendChild(makeItem(v, true, () => {
+      const c2 = getChecked();
+      if (!c2[v]) {
+        box.querySelectorAll('.code').forEach(node => {
+          if (node.textContent === v) {
+            const r = node.closest('.result');
+            if (r) r.remove();
+          }
+        });
+      }
+      refresh(); updateCnt();
+    }, 'checked-list'));
+  });
+  refresh();
+}
+
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+updateCnt();
+</script></body></html>
